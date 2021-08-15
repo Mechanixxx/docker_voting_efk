@@ -11,6 +11,13 @@ services:
             - 20000:80
         depends_on:
             - voting
+        links:
+            - fluentd
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: localhost:24224
+                tag: nginx
     voting:
         build:
             context: .
@@ -23,6 +30,13 @@ services:
             - .env
         depends_on:
             - mysql
+        links:
+            - fluentd
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: localhost:24224
+                tag: voting
     mysql:
         image: mysql:5.7
         networks:
@@ -32,11 +46,44 @@ services:
             MYSQL_USER: voting
             MYSQL_DATABASE: voting
             MYSQL_PASSWORD: voting
+        links:
+            - fluentd
+        logging:
+            driver: fluentd
+            options:
+                fluentd-address: localhost:24224
+                tag: db
     redis:
         image: redis:latest
         networks:
             - votrds
-
+        links:
+            - fluentd
+        logging:
+            fluentd-address: localhost:24224
+            tag: redis
+    fluentd:
+        build: ./fluentd
+        volumes: 
+            - ./fluentd/conf:/fluentd/etc
+        links:
+            - elasticsearch
+        ports:
+            - 24224:24224
+            - 24224:24224/udp
+    
+    elasticsearch:
+        image: elasticsearch
+        expose:
+            - 9200
+        ports:
+            - 9200:9200
+    kibana:
+        image: kibana
+        links:
+            - elasticsearch
+        ports:
+            - 5601:5601
             
 networks:
     votprx:
